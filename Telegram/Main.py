@@ -1,6 +1,5 @@
 import os,telegram
 from img import *
-from emoji import emojize
 from telegram.ext import *
 
 
@@ -53,163 +52,21 @@ def get_file(update, context): # 사진과 마찬가지로 경로 생성 - 파�
 # echo reply function
 def echo_command(update, context): # 자문자답
     user_text = update.message.text
-    if '모해' in user_text:
+
+    if '뭐해' in user_text:
         bot.send_message(chat_id=chat_id, text='오빠 생각 ㅎㅎ')
-    '''
-    elif '아잉' in user_text:
-        bot.send_message(chat_id=chat_id, text=emojize('아잉:heart_eyes:', use_aliases=True))
-    '''
-    if '몇시' in user_text:
-        bot.send_message(chat_id=chat_id, text='7시에 보자')
-    elif '민정사진' in user_text:
-        bot.send_photo(chat_id=chat_id, photo=open('Desktop\Emma\img\Rhee Min-Jung\mj.jpg','rb'))
 
-    if '민정' in user_text:
-        bot.send_message(chat_id=chat_id, text='왱?')
+    elif '사진' in user_text:
+        bot.send_photo(chat_id=chat_id, photo=open('E:\Program\Python\API\Emma\img\Rhee Min-Jung\mj.jpg','rb'))
 
-    elif '이유사진' in user_text:
-        bot.send_photo(chat_id=chat_id, photo=open('Desktop\Emma\img\IU\IU.jpg','rb'))
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
+    # 원하는 만큼 추가 가능
+    elif 'Input' in user_text: # Text
+        bot.send_message(chat_id=chat_id, text='Output')
 
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
+    elif 'Input' in user_text: # Photo
+        bot.send_photo(chat_id=chat_id, photo=open('path\name.extens','rb'))
 
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')  
 
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')   
-
-    elif '뭐해' in user_text:
-        bot.send_message(chat_id=chat_id, text='아무것도 안 합니다')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')  
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '뭐해' in user_text:
-        bot.send_message(chat_id=chat_id, text='아무것도 안 합니다')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')  
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')   
-
-    elif '뭐해' in user_text:
-        bot.send_message(chat_id=chat_id, text='아무것도 안 합니다')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')  
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
-    
-    elif '엠마' in user_text:
-        bot.send_message(chat_id=chat_id, text='네, 대답하세요.')
 
 updater = Updater(token, use_context=True) # updater는 봇의 업데이트 사항이 있으면 이를 가져오는 클래스입니다.
 
