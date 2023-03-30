@@ -3,9 +3,6 @@ import win32com.client as win32com
 from Info import *
 
 
-# day = t.tm_wday
-
-
 class XASession:
     login_state = 0
     def OnLogin(self, szCode, szMsg):
@@ -27,30 +24,26 @@ class HTS:
 class MyBalance:
     매수 = False
     t0441_ok = False
-    cCode = ""
-    pCode = ""
     chooose = 0
 
     def OnReceiveData(self, trCode):
-        Main.request_chartindex1(code=MyBalance.cCode,min=n분)
-        time.sleep(2)
-        Main.request_chartindex2(code=MyBalance.pCode,min=n분)
         cnt0441 = self.GetBlockCount("t0441OutBlock1")
         if int(cnt0441) == 0:
             if self.매수 == False:
                 print("[%s] %s %s --- %s %s" % (MyBalance.chooose,ChartIndex1.CB_terms,ChartIndex1.C26d,ChartIndex2.PB_terms,ChartIndex2.P26d))
 
-                if (MyBalance.chooose == 1) and (ChartIndex1.CB_terms == True) and (ChartIndex1.C26d == 1):
+                if (MyBalance.chooose != 2) and (ChartIndex1.CB_terms == True) and (ChartIndex1.C26d == 1):
                     self.매수 = True
                     print("Call 매수 시작")
-                    Main.order_option(oCode=MyBalance.cCode,BnsTpCode="2")
-                if (MyBalance.chooose == 2) and (ChartIndex2.PB_terms == True) and (ChartIndex2.P26d == 1):
+                    Main.order_option(oCode=Main.cCode,BnsTpCode="2")
+                if (MyBalance.chooose != 1) and (ChartIndex2.PB_terms == True) and (ChartIndex2.P26d == 1):
                     self.매수 = True
                     print("Put 매수 시작")
-                    Main.order_option(oCode=MyBalance.pCode,BnsTpCode="2")
+                    Main.order_option(oCode=Main.pCode,BnsTpCode="2")
 
-        else:
+        elif (int(cnt0441) != 0) and (self.매수 == False):
             self.매수 = True
+        else:
             for i in range(cnt0441):
                 expcode = self.GetFieldData("t0441OutBlock1", "expcode", i) # 종목번호
                 sunikrt = self.GetFieldData("t0441OutBlock1", "sunikrt", i) # 수익률
@@ -79,23 +72,22 @@ class MyBalance:
                         print("[%s] Put 가격 변동 확인됨 --- Call 손절 주문 수익률: %s" % (expcode,sunikrt)+"%")
                         Main.order_option(oCode=expcode,BnsTpCode="1")
                 
-                    elif T2301.disaprng2 == True and T2301.sigo1 == 0 and T2301.sigo2 > 0 and CP == "3": # Put 매도
+                    elif (T2301.disaprng2 == True) and (T2301.sigo1 == 0) and (T2301.sigo2 > 0) and (CP == "3"): # Put 매도
                         self.매수 = False
                         ChartIndex2.PB_terms = False
                         print("[%s] Call 가격 변동 확인됨 --- Put 손절 주문 수익률: %s" % (expcode,sunikrt)+"%")
-                        Main.order_option(oCode=expcode,BnsTpCode="1")  
-        threading.Timer(2,Main.request_balance).start()
+                        Main.order_option(oCode=expcode,BnsTpCode="1")
+        # threading.Timer(1.5,Main.request_balance).start()
 
 
 class T2301: # 옵션 전광판
-    # 암묵적으로 Call = 1 / Put = 2 이다
+    # Call = 1 / Put = 2 이다
     cnt_dict = {}
     price1_dict = {}
     price2_dict = {}
     price1_list = []
     price2_list = []
-    cCode = ""
-    pCode = ""
+
 
     t2301 = None
     cnt1 = 0
@@ -107,7 +99,9 @@ class T2301: # 옵션 전광판
     disaprng2 = False
 
     def OnReceiveData(self,trCode):
-
+        Main.request_chartindex1(code=Main.cCode,min=n분)
+        time.sleep(1.5)
+        Main.request_chartindex2(code=Main.pCode,min=n분)
         cnt2301 = self.GetBlockCount("t2301OutBlock1")
 
         for i in range(cnt2301):
@@ -148,7 +142,7 @@ class T2301: # 옵션 전광판
                 if (bas_max > int(price1) > bas_min):
                     T2301.price1_dict[optcode1] = price1
                     T2301.price1_list = list(T2301.price1_dict.keys())
-                    
+
                 elif (bas_max > int(price2) > bas_min):
                     T2301.price2_dict[optcode2] = price2
                     T2301.price2_list = list(T2301.price2_dict.keys())
@@ -156,9 +150,8 @@ class T2301: # 옵션 전광판
             else:
                 T2301.cCode = T2301.price1_list[0]
                 T2301.pCode = T2301.price2_list[-1]
-                MyBalance.cCode = T2301.cCode
-                MyBalance.pCode = T2301.pCode
-
+                Main.cCode = T2301.cCode
+                Main.pCode = T2301.pCode
                 if T2301.cnt_dict == {}:# 시가-고가 확인하는 부분
                     T2301.sigo1 = T2301.cnt1
                     T2301.sigo2 = T2301.cnt2
@@ -167,22 +160,22 @@ class T2301: # 옵션 전광판
                 else:
                     T2301.cnt_dict.update({"CK":T2301.sigo1,"PK":T2301.sigo2})
 
-                    if T2301.sigo1 < T2301.sigo2:
+                    if (T2301.sigo1) < (T2301.sigo2):
                         T2301.choose = 1
                         MyBalance.chooose = 1
-                    elif T2301.sigo1 > T2301.sigo2:
+                    elif (T2301.sigo1) > (T2301.sigo2):
                         T2301.choose = 2
                         MyBalance.chooose = 2
-                    else:
+                    elif (T2301.sigo1) == (T2301.sigo2):
                         T2301.choose = 0
                 T2301.cnt1 = 0
                 T2301.cnt2 = 0
-                threading.Timer(2,Main.request_option_table,args=[when]).start()
+
+                # threading.Timer(2,Main.request_option_table,args=[when]).start()
 
 
 class ChartIndex1:
     C26d = 0
-    매수 = 0
     CB_terms = False
     Call_일목 = None
 
@@ -203,7 +196,6 @@ class ChartIndex1:
 
 class ChartIndex2:
     P26d = 0
-    매수 = 0
     Put_일목 = None
     PB_terms = False
     
@@ -234,6 +226,8 @@ class Main():
     check = 0
     tt = None
     oo = None
+    cCode = ""
+    pCode = ""
 
     def __init__(self):
 
@@ -284,8 +278,9 @@ class Main():
             print("\n%s님의 %s 계좌번호: %s\n" % (Name, Detail, Number))
 
         Main.request_option_table(yyyymm=when)
-        time.sleep(1.1)
         Main.request_balance()
+
+        print(Main.cCode)
         while True:
             pythoncom.PumpWaitingMessages()
 
@@ -294,12 +289,14 @@ class Main():
         Main.tt.SetFieldData("t0441InBlock", "accno", 0, Main.Number)
         Main.tt.SetFieldData("t0441InBlock", "passwd", 0, demo_pw)
         err = Main.tt.Request(False)
+        # print("1 %s"%err)
 
     @staticmethod
     def request_option_table(yyyymm=None):
         T2301.t2301.SetFieldData("t2301InBlock", "yyyymm", 0, yyyymm)
         T2301.t2301.SetFieldData("t2301InBlock", "gubun", 0, "G")
         err = T2301.t2301.Request(False)
+        # print("2 %s"% err)
 
     @staticmethod
     def request_chartindex1(code=None,min=None):
@@ -317,8 +314,8 @@ class Main():
         cc.SetFieldData("ChartIndexInBlock", "Isamend", 0, "1")
         cc.SetFieldData("ChartIndexInBlock", "Isgab", 0, "0")
         cc.SetFieldData("ChartIndexInBlock", "IsReal", 0, "1")
-        cc.RequestService("ChartIndex", 0)
-
+        err = cc.RequestService("ChartIndex", 0)
+        # print("3 %s"% err)
 
     def request_chartindex2(code=None,min=None):
         cp = ChartIndex2.Put_일목
@@ -335,8 +332,8 @@ class Main():
         cp.SetFieldData("ChartIndexInBlock", "Isamend", 0, "1") 
         cp.SetFieldData("ChartIndexInBlock", "Isgab", 0, "0")
         cp.SetFieldData("ChartIndexInBlock", "IsReal", 0, "1")
-        cp.RequestService("ChartIndex", 0)
-
+        err = cp.RequestService("ChartIndex", 0)
+        # print("4 %s"% err)
 
     @staticmethod
     def order_option(oCode=None, BnsTpCode=None):
