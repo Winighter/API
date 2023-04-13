@@ -1,10 +1,10 @@
 # eBest Chart Data
-ID = "ypeace20" # 아이디 ex) abc1234
-hts_pw = "yw2603@@" # 비밀번호 ex) a1b2c3
-Cert_pw = "c3484758!@"
+ID = "" # 아이디 ex) abc1234
+hts_pw = "" # 비밀번호 ex) a1b2c3
+Cert_pw = "" # 인증서 비밀번호
 
 # eBest 모의투자
-demo_pw = "yw2603"
+demo_pw = ""
 demo_acc_pw = "0000"
 
 수량 = 4
@@ -35,10 +35,6 @@ fCode = "101T6000"
 Order_cancellation_range = 0.06
 
 OCR = float(Order_cancellation_range)
-
-
-# 7013330531
-
 
 
 # 손익율 = (평가금액 - 약정금액)/약정금액*100 -0.03%
