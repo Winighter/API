@@ -1,3 +1,5 @@
+# 필수적인 기능 모두 포함됨 v.1
+
 import pythoncom,threading,time,sys
 import win32com.client as win32com
 from PyQt5.QAxContainer import *
