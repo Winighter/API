@@ -1,0 +1,556 @@
+import pythoncom,threading,time,sys
+import win32com.client as win32com
+from PyQt5.QAxContainer import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from errorCode import *
+from Info import *
+
+
+class HTS:
+    login_state = 0
+    def OnLogin(self, szCode, szMsg):
+        if szCode == "0000":
+            HTS.login_state = 1
+        else:
+            print("[X] HTS Login failed !!! {%s: %s}\n" % (szCode,szMsg))
+
+
+class Trend:
+    t = None
+    test = False
+    scCode = {}
+    spCode = {}
+    t2301 = None
+    차트 = False
+    매수 = False
+    정정 = False
+    cCode = ""
+    pCode = ""
+    cPrice = 0
+    pPrice = 0
+    cnt1 = 0
+    cnt2 = 0
+    sigo1 = 0
+    sigo2 = 0
+    disaprng1 = 0
+    disaprng2 = 0
+    vol = 0
+            
+             
+    def OnReceiveData(self,trCode):
+
+        if trCode == 't2105':
+            dvol = self.GetFieldData("t2105OutBlock", "dvol", 0) # 매도 호가 총 잔량
+            svol = self.GetFieldData("t2105OutBlock", "svol", 0) # 매수 호가 총 잔량
+            Trend.vol = int(svol) - int(dvol)
+            trendict.update({'순매수량':Trend.vol})
+            threading.Timer(1,Main.request_hoka).start()
+                             
+        else:
+            if Trend.test == True:    
+                print("테스트 주문 시작")
+                Trend.test = False
+                order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,QString,QString,QString)",["매도","2000","7013330531",'201T5350','1','1','3',1,'0',''])
+                if order_success == 0:
+                    print("테스트 주문 전달 성공")
+                else:
+                    print("테스트 주문 전달 실패") 
+                                  
+            cnt2301 = self.GetBlockCount("t2301OutBlock1")
+            for i in range(cnt2301):
+                optcode1 = self.GetFieldData("t2301OutBlock1", "optcode", i) # Call 행사가        
+                optcode2 = self.GetFieldData("t2301OutBlock2", "optcode", i) # Put 행사가 
+                
+                open1 = self.GetFieldData("t2301OutBlock1", "open", i) # 시가          
+                if open1 != (''):
+                    open1 = float(open1)
+                if open1 == 0:
+                    open1 = int(open1)
+                        
+                high1 = self.GetFieldData("t2301OutBlock1", "high", i) # 고가
+                if high1 != (''):
+                    high1 = float(high1) 
+                if high1 == 0:
+                    high1 = int(high1)       
+                                        
+                price1 = self.GetFieldData("t2301OutBlock1", "price", i) # 현재가(종가)   
+                if price1 != (''):
+                    price1 = float(price1)  
+                if price1 == 0:
+                    price1 = int(price1)      
+                                            
+                bidho1 = self.GetFieldData("t2301OutBlock1", "bidho1", i) # C매수호가     
+                if bidho1 != (''):
+                    bidho1 = float(bidho1) 
+                if bidho1 == 0:
+                    bidho1 = int(bidho1)     
+                                                
+                open2 = self.GetFieldData("t2301OutBlock2", "open", i) # 시가
+                if open2 != (''):
+                    open2 = float(open2) 
+                if open2 == 0:
+                    open2 = int(open2)     
+                                        
+                high2 = self.GetFieldData("t2301OutBlock2", "high", i) # 고가
+                if high2 != (''):
+                    high2 = float(high2)   
+                if high2 == 0:
+                    high2 = int(high2)      
+                                    
+                price2 = self.GetFieldData("t2301OutBlock2", "price", i) # 현재가(종가)
+                if price2 != (''):
+                    price2 = float(price2) 
+                if price2 == 0:
+                    price2 = int(price2)       
+                                        
+                bidho2 = self.GetFieldData("t2301OutBlock2", "bidho1", i) # P매수호가
+                if bidho2 != (''):
+                    bidho2 = float(bidho2)      
+                if bidho2 == 0:
+                    bidho2 = int(bidho2)                      
+
+                if (int(cnt2301)-1) != i:
+                    Trend.cnt1 = 0
+                    Trend.cnt2 = 0
+
+                    if (sigo_max > (open1 and high1) > sigo_min) and open1 == high1:
+                        Trend.cnt1 += 1
+                        trendict.update({'c손절':1})
+                        Trend.sigo1 = Trend.cnt1
+
+                    elif (sigo_max > (open2 and high2) > sigo_min) and open2 == high2:
+                        Trend.cnt2 += 1
+                        trendict.update({'p손절':1})
+                        Trend.sigo2 = Trend.cnt2   
+                    trendict.update({'cSiKo':Trend.sigo1,'pSiKo':Trend.sigo2})
+
+                    if trendict['cSiKo'] < trendict['pSiKo']:
+                        trendict.update({'추세':1})
+
+                    elif trendict['cSiKo'] > trendict['pSiKo']:
+                        trendict.update({'추세':2})
+
+                    else:
+                        trendict.update({'추세':0})
+                
+
+                if bas_max > price1 > bas_min and optcode1[0:1] == "2": # Call                    
+                    Trend.scCode.update({optcode1:bidho1})
+                    if len(Trend.scCode.keys()) == 1:
+                        Trend.cCode = list(Trend.scCode.keys())[0]
+                        Trend.cPrice = Trend.scCode[Trend.cCode]
+                        
+                    elif len(Trend.scCode.keys()) > 1:
+                        l = (list(Trend.scCode.keys()))
+                        Trend.cCode = l[0]
+                        Trend.cPrice = Trend.scCode[Trend.cCode]
+                        
+                    if Trend.cCode != trendict['cCode']:
+                        trendict.update({'cCode':Trend.cCode})
+                        Main.request_cChart(Code=Trend.cCode)
+                        time.sleep(1) 
+                    else:
+                        trendict.update({'cPrice':Trend.cPrice})                           
+ 
+                           
+                if bas_max > price2 > bas_min and optcode2[0:1] == "3": # Put
+                    Trend.spCode.update({optcode2:bidho2})
+                    if len(Trend.spCode.keys()) == 1:
+                        Trend.pCode = list(Trend.spCode.keys())[0]
+                        Trend.pPrice = Trend.spCode[Trend.pCode]   
+                    
+                    elif len(Trend.spCode.keys()) > 1:
+                        s = (list(Trend.spCode.keys()))
+                        s.reverse()
+                        Trend.pCode = s[0]
+                        Trend.pPrice = Trend.spCode[Trend.pCode]
+                    
+                    if Trend.pCode != trendict['pCode']:
+                        trendict.update({'pCode':Trend.pCode})
+                        Main.request_pChart(Code=Trend.pCode) 
+                        time.sleep(1)              
+                    else:
+                        trendict.update({'pPrice':Trend.pPrice})
+                        
+                if Main.balance_dict == {}: # 매수 및 정정
+                    print("보유 종목 없음")
+                    if self.매수 == False:
+                        if (trendict['추세'] != 2) and (trendict['cTerms'] == 1) and (trendict['c26d'] == 1) and (trendict['순매수량'] > c호가):
+                            buy = list(trendict.values())[1]
+                            self.매수 = True
+                            print("Call 매수 시작")
+                            order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,int,QString,QString)",["매수","2000",Main.Number,oCode,'1','2','1',수량,buy,'0'])
+                            if order_success == 0:
+                                print("%s 매수주문 전달 성공" % oCode['cCode'])
+                                Chart1.CB_terms = 0
+                            else:
+                                print("%s 매수주문 전달 실패" % oCode['cCode'])
+                                
+                                
+                        if (trendict['추세'] != 1) and (trendict['pTerms'] == 1) and (trendict['p26d'] == 1) and (trendict['순매수량'] < p호가):
+                            buy = list(trendict.values())[3]
+                            self.매수 = True
+                            print("Put 매수 시작")
+                            order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,int,QString,QString)",["매수","2000",Main.Number,oCode,'1','2','1',수량,buy,'0'])
+                            if order_success == 0:
+                                print("%s 매수주문 전달 성공" % oCode['pCode'])
+                                Chart2.PB_terms = 0
+                            else:
+                                print("%s 매수주문 전달 실패" % oCode['pCode'])                        
+                    if Main.balance_dict == {} and Trend.매수 == True:
+                        self.매수 = False      
+                         
+                    if (Trend.정정 == False) and (Main.revise_order_dict != {}) and (Main.revise_order_dict['종목코드'] not in Main.balance_dict.values()): # 주문 정정
+            
+                        if str(Main.revise_order_dict['주문수량']) == str(Main.revise_order_dict['미체결수량']):
+                            rCode = Main.revise_order_dict['종목코드']
+                            rOrderNo = Main.revise_order_dict['주문번호']
+                            rOP = Main.revise_order_dict['주문가격']
+                            rPrice = Main.revise_order_dict['매수호가']
+                            rUq= Main.revise_order_dict['미체결수량']
+                            price = Main.revise_order_dict['현재가']
+                            
+                            if float(price) > float(rOP) + OCR:
+                                Trend.정정 = True
+                                print("%s 정정 주문 시작"% rCode)
+                                order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,int,QString,QString)",["주문정정","3000",Main.Number,rCode,'2','2','1',rUq,rPrice,rOrderNo])
+                                if order_success == 0:
+                                    print("%s 정정주문 전달 성공" % rCode)
+                                    Main.revise_order_dict = {}
+                                else:
+                                    print("%s 정정주문 전달 실패" % rCode) 
+                    if Trend.정정 == True and  Main.revise_order_dict == {}:
+                        Trend.정정 = False                                                
+            
+            
+                if Main.balance_dict != {} and Trend.매수 == True: # 매도
+                    oCode = Main.balance_dict['종목코드']
+                    qh = Main.balance_dict['보유수량']
+                    qh = int(qh)
+                    ca = int(Main.balance_dict['약정금액'])
+                    oq = int(Main.balance_dict['주문가능수량'])
+                    
+                    if (ror <= 손절) or (ror >= 이익): # 수익률 매도
+                        CP = Main.balance_dict['종목코드'][0:1]
+                        print("[%s] 수익률: %s 매도 주문 시작" % (oCode,ror))
+                        Trend.매수 = False
+                        if CP == "2":
+                            trendict.update({'cTerms':0})
+                        elif CP == "3":
+                            trendict.update({'pTerms':0})
+                        order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,QString,QString,QString)",["매도","2000",Main.Number,oCode,'1','1','3',oq,'0',''])
+                    
+                        
+                    if optcode1 == oCode:
+                        ea1 = (price1*qh*250000)
+                        Main.balance_dict.update({'평가금액':ea1})
+                        Main.balance_dict.update({'현재가':price1})
+                        ror = ((((ea1-ca)/ca*100) - 0.3),2)
+                        Main.balance_dict.update({'수익률':ror})  
+                        if trendict['c손절'] == 1 and trendict['pSiKo'] == 0 and trendict['cSiKo'] > 0:# 콜 매도
+                            print("시가 고가 손절매도 %s Main.balance_dict"%Main.balance_dict)
+                            self.매수 = False
+                            trendict.update({'cTerms':0})
+                            print("[%s] Put 가격 변동 확인됨 --- Call 손절 주문" % oCode)
+                            order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,int,QString,QString)",["매도","2000",Main.Number,oCode,'1','1','3',oq,'0',''])
+                                                                 
+                    elif optcode2 == oCode:
+                        
+                        ea2 = (price2*qh*250000)
+                        Main.balance_dict.update({'평가금액':int(ea2)})
+                        Main.balance_dict.update({'현재가':price2})
+                        ror = ((((ea2-ca)/ca*100) - 0.3),2)
+                        Main.balance_dict.update({'수익률':ror})
+                        if trendict['p손절'] == 1 and trendict['cSiKo'] == 0 and trendict['pSiKo'] > 0:# 풋 매도
+                            print("시가 고가 손절매도 %s Main.balance_dict"% Main.balance_dict)
+                            self.매수 = False
+                            trendict.update({'pTerms':0})
+                            print("[%s] Call 가격 변동 확인됨 --- Put 손절 주문" % oCode)
+                            order_success = Main.kiwoom.dynamicCall("SendOrderFO(QString,QString,QString,QString,QString,QString,QString,int,QString,QString)",["매도","2000",Main.Number,oCode,'1','1','3',oq,'0',''])
+                    
+                    if order_success == 0:
+                        print("%s 매도주문 전달 성공" % oCode)
+                        Main.balance_dict = {}
+                    else:
+                        print("%s 매도주문 전달 실패" % oCode)   
+                                           
+                elif Main.balance_dict != {} and Trend.매수 == False:
+                    self.매수 == True      
+ 
+            threading.Timer(1,Main.request_option_table,args=[when]).start()
+            print(trendict)
+            print(Main.balance_dict)
+            
+
+class Chart1:
+    cChart = None
+
+    def OnReceiveChartRealData(self, trCode):
+        현재가 = self.GetFieldChartRealData("ChartIndexOutBlock1", "close") # 현재가(종가)
+        현재가 = float(현재가)
+
+        기준선 = self.GetFieldChartRealData("ChartIndexOutBlock1", "value2") # 기준선
+        기준선 = float(기준선)
+
+        if 기준선 != 0:
+            if 현재가 > 기준선:
+                trendict.update({'c26d':1})
+            elif 현재가 < 기준선:
+                trendict.update({'cTerms':1,'c26d':0})
+
+
+class Chart2:
+    pChart = None
+    
+    def OnReceiveChartRealData(self, trCode):
+        현재가 = self.GetFieldChartRealData("ChartIndexOutBlock1", "close") # 현재가(종가)
+        현재가 = float(현재가)
+
+        기준선 = self.GetFieldChartRealData("ChartIndexOutBlock1", "value2") # 기준선
+        기준선 = float(기준선)
+
+        if 기준선 != 0:
+            if 현재가 > 기준선:
+                trendict.update({'p26d':1})
+            elif 현재가 < 기준선:
+                trendict.update({'pTerms':1,'p26d':0})
+                
+
+class Main(QAxWidget):
+    
+    revise_order_dict = {}
+    code_info_dict = {}
+    balance_dict = {}
+    Number = ""
+    def __init__(self): 
+        self.app = QApplication(sys.argv)
+        super().__init__()
+        self.매수 = False
+        self.정정 = False
+        self.login_event_loop = QEventLoop()
+        
+        Main.kiwoom = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
+        
+        self.event_slots()
+        self.real_event_slot()
+        self.request_login_kiwoom()
+        self.request_login_info()
+        self.request_tr_balance()
+        
+        Xing_hts = win32com.DispatchWithEvents("XA_Session.XASession", HTS)
+        
+        Trend.t = win32com.DispatchWithEvents("XA_DataSet.XAQuery", Trend)
+        Trend.t.ResFileName = "C:/eBEST/xingAPI/Res/t2105.res"
+        
+        Trend.t2301 = win32com.DispatchWithEvents("XA_DataSet.XAQuery", Trend)
+        Trend.t2301.ResFileName = "C:/eBEST/xingAPI/Res/t2301.res"
+
+        Chart1.cChart = win32com.DispatchWithEvents("XA_DataSet.XAQuery", Chart1)
+        Chart1.cChart.ResFileName = "C:/eBEST/xingAPI/Res/ChartIndex.res"
+
+        Chart2.pChart = win32com.DispatchWithEvents("XA_DataSet.XAQuery", Chart2)
+        Chart2.pChart.ResFileName = "C:/eBEST/xingAPI/Res/ChartIndex.res"
+        
+        Xing_hts.ConnectServer("hts.ebestsec.co.kr", 20001)
+
+        if Xing_hts.Login(ID, hts_pw, Cert_pw, 0, True) is True:
+            pass
+        else:
+            nErrCode = Xing_hts.GetLastError()
+            strErrMsg = Xing_hts.GetErrorMessage(nErrCode)
+            print("\n[X] HTS Server Connection Failed !!! {%s: %s}" % (nErrCode, strErrMsg))
+        while HTS.login_state == 0:
+            pythoncom.PumpWaitingMessages()
+            
+        Main.request_hoka()
+        Main.request_option_table(yyyymm=when)
+        while True:
+            pythoncom.PumpWaitingMessages()
+
+        
+    def event_slots(self):
+        Main.kiwoom.OnEventConnect.connect(self.login_slot)
+        Main.kiwoom.OnReceiveTrData.connect(self.trdata_slot)
+
+              
+    def real_event_slot(self):
+        Main.kiwoom.OnReceiveChejanData.connect(self.chejan_slot) 
+        
+        
+    def request_login_kiwoom(self):
+        Main.kiwoom.dynamicCall("CommConnect()")
+        self.login_event_loop.exec_()
+        
+        
+    def login_slot(self,err_code):
+        print(errors(err_code)[1])
+        self.login_event_loop.exit()
+        
+        
+    def request_login_info(self):
+        num = Main.kiwoom.dynamicCall("GetLoginInfo(QString)","ACCLIST") # or "ACCNO" / 계좌번호
+        Main.Number = num[:-1]
+        user = Main.kiwoom.dynamicCall("GetLoginInfo(QString)","USER_NAME") # 사용자 이름
+        print("\n%s님의 계좌번호 %s\n" % (user,Main.Number))
+        
+    
+    def request_tr_balance(self):
+        Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","계좌번호",Main.Number)
+        Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","비밀번호",demo_acc_pw)
+        Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","비밀번호입력매체구분","00")
+        Main.kiwoom.dynamicCall("CommRqData(QString,QString,QString,QString)","선옵잔고요청","opw20007","0","1000")
+
+        
+    def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
+        
+        if sRQName == "선옵잔고요청":
+
+            rows = Main.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            if rows > 0: # 잔고에 있을 때
+                for i in range(rows):
+                    oCode = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "종목코드")
+                    oCode = oCode.strip()
+                    
+                    medosu = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "매도매수구분") # 1:매도,2:매수
+
+                    quantity_held = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "수량")
+                    qh = int(quantity_held)
+
+                    orderable_quantity = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "청산가능수량")
+                    oq = int(orderable_quantity)
+                    
+                    buy_price = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "매입단가")
+                    bp = round(float(buy_price)*0.001,2)
+
+                    price = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "현재가")
+                    p = round(float(price)*0.001,2)
+                                            
+                    contract_amount = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "약정금액")
+                    ca = int(contract_amount)
+                    
+                    evaluation_amount = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "평가금액")
+                    ea = int(evaluation_amount)
+                    
+                    ror = round((((ea-ca)/ca*100) - 0.3),2)
+
+                    if oCode not in Main.balance_dict.values():
+                        Main.balance_dict.update({'종목코드': oCode,'구분':medosu,'보유수량':qh,'주문가능수량':oq,'매입단가':bp,'현재가':p,'약정금액':ca,'평가금액':ea,'수익률':ror})
+                    else:
+                        Main.balance_dict.update({'구분':medosu,'보유수량':qh,'주문가능수량':oq,'매입단가':bp,'현재가':p,'약정금액':ca,'평가금액':ea,'수익률':ror})           
+            else:
+                pass
+                    
+                             
+    @staticmethod
+    def request_option_table(yyyymm=None):
+        Trend.t2301.SetFieldData("t2301InBlock", "yyyymm", 0, yyyymm)
+        Trend.t2301.SetFieldData("t2301InBlock", "gubun", 0, "G")
+        Trend.t2301.Request(False)
+
+
+    @staticmethod
+    def request_hoka():
+        Trend.t.SetFieldData("t2105InBlock", "shcode", 0, fCode)
+        Trend.t.Request(False) 
+        
+        
+    @staticmethod
+    def request_cChart(Code=None):
+        cc = Chart1.cChart
+        cc.SetFieldData("ChartIndexInBlock", "indexid", 0, "")
+        cc.SetFieldData("ChartIndexInBlock", "indexname", 0, "일목균형표")
+        cc.SetFieldData("ChartIndexInBlock", "indexparam", 0, "")
+        cc.SetFieldData("ChartIndexInBlock", "market", 0, "5")
+        cc.SetFieldData("ChartIndexInBlock", "period", 0, "1")
+        cc.SetFieldData("ChartIndexInBlock", "shcode", 0, Code)
+        cc.SetFieldData("ChartIndexInBlock", "qrycnt", 0, "500")
+        cc.SetFieldData("ChartIndexInBlock", "ncnt", 0, n분)
+        cc.SetFieldData("ChartIndexInBlock", "sdate", 0, "")
+        cc.SetFieldData("ChartIndexInBlock", "edate", 0, "")
+        cc.SetFieldData("ChartIndexInBlock", "Isamend", 0, "1")
+        cc.SetFieldData("ChartIndexInBlock", "Isgab", 0, "0")
+        cc.SetFieldData("ChartIndexInBlock", "IsReal", 0, "1")
+        cc.RequestService("ChartIndex", 0)
+
+
+    def request_pChart(Code=None):
+        cp = Chart2.pChart
+        cp.SetFieldData("ChartIndexInBlock", "indexid", 0, "")
+        cp.SetFieldData("ChartIndexInBlock", "indexname", 0, "일목균형표")
+        cp.SetFieldData("ChartIndexInBlock", "indexparam", 0, "")
+        cp.SetFieldData("ChartIndexInBlock", "market", 0, "5") 
+        cp.SetFieldData("ChartIndexInBlock", "period", 0, "1")
+        cp.SetFieldData("ChartIndexInBlock", "shcode", 0, Code)
+        cp.SetFieldData("ChartIndexInBlock", "qrycnt", 0, "500")
+        cp.SetFieldData("ChartIndexInBlock", "ncnt", 0, n분)
+        cp.SetFieldData("ChartIndexInBlock", "sdate", 0, "") 
+        cp.SetFieldData("ChartIndexInBlock", "edate", 0, "") 
+        cp.SetFieldData("ChartIndexInBlock", "Isamend", 0, "1") 
+        cp.SetFieldData("ChartIndexInBlock", "Isgab", 0, "0")
+        cp.SetFieldData("ChartIndexInBlock", "IsReal", 0, "1")
+        err2 = cp.RequestService("ChartIndex", 0)
+       
+                
+    def chejan_slot(self, Gubun, nItemCnt, sFidList):
+         
+        if int(Gubun) == 0: # 접수와 체결
+
+            oCode = Main.kiwoom.dynamicCall("GetChejanData(int)", 9001) # 종목코드
+            
+            medosu = Main.kiwoom.dynamicCall("GetChejanData(int)", 905) # 구분
+            medosu = medosu.strip().lstrip('+').lstrip('-')
+            
+            order_number = Main.kiwoom.dynamicCall("GetChejanData(int)", 9203) # 주문번호
+            on = int(order_number)
+            
+            order_q = Main.kiwoom.dynamicCall("GetChejanData(int)", 900) # 주문수량
+            
+            un_quan = Main.kiwoom.dynamicCall("GetChejanData(int)", 902) # 미체결수량
+            un_quan = int(un_quan)     
+                             
+            one_order_number = Main.kiwoom.dynamicCall("GetChejanData(int)", 904) # 원주문번호
+            oon = int(one_order_number)
+            
+            order_price = Main.kiwoom.dynamicCall("GetChejanData(int)", 901) # 주문가격
+          
+            price = Main.kiwoom.dynamicCall("GetChejanData(int)", 10) # 현재가
+            
+            rPrice1 = Main.kiwoom.dynamicCall("GetChejanData(int)", 28) # 최우선 매수호가1
+             
+            if un_quan == 0 and (("취소" not in medosu)):
+                print("\n%s 체결 | No.%s | %s | 주문가: %s | 주문수량: %s개 | 미체결량: %s개"%(medosu,on,oCode,order_price,order_q,un_quan))
+            else:
+                Main.revise_order_dict = ({'종목코드':oCode,'구분':medosu,'주문번호':on,'주문수량':order_q,'주문가격':order_price,'미체결수량':un_quan,'원주문번호':oon,'매수호가':rPrice1,'현재가':price})
+                print("\n%s 접수 | No.%s | %s | 주문가: %s | 주문수량: %s개 | 미체결량: %s개 | 현재가: %s"%(medosu,on,oCode,order_price,order_q,un_quan,price))
+
+   
+        elif int(Gubun) == 4: # 파생잔고
+            
+            o = Main.kiwoom.dynamicCall("GetChejanData(int)", 9001)
+            
+            a = Main.kiwoom.dynamicCall("GetChejanData(int)", 10) # 현재가
+            a = a.strip().lstrip('+').lstrip('-')
+
+            b = Main.kiwoom.dynamicCall("GetChejanData(int)", 930) # 보유수량
+            
+            c = Main.kiwoom.dynamicCall("GetChejanData(int)", 931) # 매입단가
+            c = float(c)
+            
+            d = Main.kiwoom.dynamicCall("GetChejanData(int)", 933) # 주문가능수량
+            
+            e = Main.kiwoom.dynamicCall("GetChejanData(int)", 946) # 구분
+            
+            g = Main.kiwoom.dynamicCall("GetChejanData(int)", 8019) # 손익율
+            
+            h = Main.kiwoom.dynamicCall("GetChejanData(int)", 397) # 파생상품거래단위
+            
+            if o in Main.balance_dict.values():
+                pass
+            else:
+                Main.balance_dict.update({'종목코드': o,'구분':e,'보유수량':b,'주문가능수량':d,'매입단가':c,'현재가':a,'약정금액':'','평가금액':'','수익률':g})
+            if b == 0:
+                del Main.balance_dict[o]
+        
+if __name__ == "__main__":
+    Main()
