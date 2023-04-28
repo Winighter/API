@@ -28,8 +28,6 @@ class Main(QAxWidget):
     def __init__(self):
         super().__init__()
         Main.login_event_loop = QEventLoop()
-        Main.Call_Trend = QEventLoop()
-        Main.Put_Trend = QEventLoop()
         Main.kiwoom = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
 
         Main.event_slots()
@@ -37,8 +35,6 @@ class Main(QAxWidget):
         Main.request_login_kiwoom()
         Main.request_login_info()
         Main.request_tr_balance()
-        Main.request_콜시세()
-        Main.request_풋시세()
         Main.kiwoom.dynamicCall("SetRealReg(QString,QString,QString,QString)",'8000',fCode,128,'0')
         
     @staticmethod
@@ -71,7 +67,6 @@ class Main(QAxWidget):
 
 
     def request_tr_balance():
-        time.sleep(1)
         Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","계좌번호",Main.Number)
         Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","비밀번호",'0000')
         Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","비밀번호입력매체구분","00")
@@ -79,28 +74,25 @@ class Main(QAxWidget):
 
 
     def request_콜시세():
-        time.sleep(1)
         Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","만기년월",'202305')
         Main.kiwoom.dynamicCall("CommRqData(QString,QString,QString,QString)","콜시세요청","OPT50021","0","5000")
-        Main.Call_Trend.exec_()
 
 
     def request_풋시세():
-        time.sleep(1)
         Main.kiwoom.dynamicCall("SetInputValue(QString,QString)","만기년월",'202305')
         Main.kiwoom.dynamicCall("CommRqData(QString,QString,QString,QString)","풋시세요청","OPT50022","0","6000")
-        Main.Put_Trend.exec_()
 
 
     def tr_data(sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
 
         if sRQName == "선옵잔고요청":
             rows = Main.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            print("잔고%s"% rows)
             if rows > 0:
                 for i in range(rows):
                     oCode = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "종목코드")
                     oCode = oCode.strip()
-                    
+
                     medosu = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "매도매수구분") # 1:매도,2:매수
                     if medosu == '2':
                         medosu = '매수'
@@ -111,29 +103,34 @@ class Main(QAxWidget):
 
                     orderable_quantity = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "청산가능수량")
                     oq = int(orderable_quantity)
-                    
+
                     buy_price = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "매입단가")
                     bp = round(float(buy_price)*0.001,2)
 
                     price = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "현재가")
                     p = round(float(price)*0.001,2)
-                                            
+
                     contract_amount = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "약정금액")
                     ca = int(contract_amount)
-                    
+
                     evaluation_amount = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, i, "평가금액")
                     ea = int(evaluation_amount)
-                    
+
                     ror = round((((ea-ca)/ca*100) - 0.33),2)
 
                     Main.balance_dict.update({'종목코드': oCode,'구분':medosu,'보유수량':qh,'주문가능수량':oq,'매입단가':bp,'현재가':p,'약정금액':ca,'평가금액':ea,'수익률':ror})
             else:
                 if Main.balance_dict != {}:
                     Main.balance_dict = {}
-            
+            threading.Timer(2,Main.request_tr_balance).start()
+            Main.request_콜시세()
+            time.sleep(1)
+            Main.request_풋시세()
+            print(trendict)
 
         elif sRQName == "콜시세요청":
             cRows = Main.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            print("Call %s"% cRows)
             for c in range(cRows):
                 cCode = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, c, "종목코드")
                 cCode = cCode.strip()
@@ -180,11 +177,11 @@ class Main(QAxWidget):
                     real_cCode = str(trendict['cCode'])+';'+str(trendict['cCode2']) # ';'+str(trendict['cCode3']
                     Main.kiwoom.dynamicCall("SetRealReg(QString,QString,QString,QString)",'8000',real_cCode,'20','1')
                     # trendict.update({'cCode3':(str(trendict[cList[0]][0:5]) + str(math.trunc(float(option_table_dict[c행사가]['행사가']) - 5.0)))}) # 콜 2번째 형님 종목코드
-            Main.Call_Trend.exit()
 
 
         elif sRQName == "풋시세요청":
             pRows = Main.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            print("Put %s"% pRows)
             for p in range(pRows):
                 pCode = Main.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)", sTrCode, sRQName, p, "종목코드")
                 pCode = pCode.strip()
@@ -232,7 +229,7 @@ class Main(QAxWidget):
 
                 if trendict['pCode2'] == pCode and trendict['pSiga2'] == 0:
                     trendict.update({'pSiga2':pOpen})
-            Main.Put_Trend.exit()    
+
 
 
     def chejan_slot(Gubun, nItemCnt, sFidList):
