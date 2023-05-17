@@ -23,15 +23,12 @@ class Main:
             print('연결끊김')
         else:
             print('HTS 보통서버')
-            
+
         self.DisConnect_CreonPlus()
-        
         
     def DisConnect_CreonPlus(self):
         print("종료시작")
         self.creon.PlusDisconnect()
-        
-
      
             
 if __name__ == '__main__':
