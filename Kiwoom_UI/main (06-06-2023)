@@ -1,0 +1,741 @@
+import os,sys, webbrowser
+from PyQt5 import QtCore, Qt
+from PyQt5.QtWidgets import QWidget
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import QMainWindow, QWidget, QSizeGrip
+
+from modules import *
+from widgets import *
+from security import *
+
+
+S = Settings
+widgets = None
+
+class Security:
+    def __init__(self): 
+        print('Run Security Class')
+        LoginScreen()
+
+
+class LoginScreen(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.login_ui = Ui_LoginScreen()
+        self.login_ui.setupUi(self)
+        UIFunctions.uiLoginDefinitions(self)
+        self.show()
+        self.login_ui.Btn_Login.clicked.connect(self.OnLogin)
+        
+
+    def OnLogin(self):
+        # GET BUTTON CLICKED
+        btn = self.sender()
+        btnName = btn.objectName()
+        if btnName == "Btn_Login":
+            id = self.login_ui.LineEdit_ID.text()
+            pw = self.login_ui.LineEdit_PW.text()
+
+            if id == '' and pw == '':
+                self.close()
+                self.splash = MainWindow()
+                self.splash.show()
+            else:
+                self.login_ui.label_login_state.setText('Incorrect Username or Password.')
+                self.login_ui.label_login_state.setStyleSheet("Color: #E81E25")
+       
+    def mousePressEvent(self, event):
+        # SET DRAG POS WINDOW
+        self.dragPos = event.globalPos()
+            
+counter = 0
+class SplashScreen(QMainWindow):
+   
+    def __init__(self):
+        QMainWindow.__init__(self)
+
+        self.ui = Ui_SplashScreen()
+        self.ui.setupUi(self)
+        # Remove Title Bar
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+        self.progress = CircularProgress()
+        self.progress.width = 270
+        self.progress.height = 270
+        self.progress.value = 0
+        self.progress.setFixedSize(self.progress.width,self.progress.height)
+        self.progress.move(15,15)
+        self.progress.font_size = 30
+        self.progress.bg_color = QColor(68,71,90,140)
+        self.progress.setParent(self.ui.centralwidget)
+        self.progress.show()
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(15)
+        self.show()
+        
+    def update(self):
+        global counter
+        
+        self.progress.set_value(counter)
+        
+        if counter >= 100:
+            self.timer.stop()
+            
+            self.main = MainWindow()
+            self.main.show()
+            
+            self.close()
+
+        counter += 1
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        # SET AS GLOBAL WIDGETS
+        # ///////////////////////////////////////////////////////////////
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        global widgets
+        widgets = self.ui
+
+        # USE CUSTOM TITLE BAR | USE AS "False" FOR MAC OR LINUX
+        # ///////////////////////////////////////////////////////////////
+        S.ENABLE_CUSTOM_TITLE_BAR = True
+        
+        # APP NAME
+        # ///////////////////////////////////////////////////////////////
+        title = 'ATS'
+        description = "ATS APP - Auto Trading System"
+
+        # APPLY TEXTS
+        self.setWindowTitle(title)
+        widgets.Label_title.setText(description)
+        
+        # TOGGLE MENU
+        # ///////////////////////////////////////////////////////////////
+        widgets.Btn_Toggle.clicked.connect(lambda: UIFunctions.toggleMenu(self, True))
+        
+        # SET UI DEFINITIONS
+        # ///////////////////////////////////////////////////////////////
+        UIFunctions.uiDefinitions(self)
+
+        # QTableWidget PARAMETERS
+        # ///////////////////////////////////////////////////////////////
+        widgets.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        # BUTTONS CLICK
+        # ///////////////////////////////////////////////////////////////
+
+        # RIGHT MENUS
+        widgets.Btn_Login.clicked.connect(lambda: Kiwoom.onLogin(self))  # LOGIN
+        widgets.Btn_RealData.clicked.connect(lambda: Kiwoom.toggle_RealData_state(self, True))
+        widgets.Btn_Etc.clicked.connect(lambda: Kiwoom.showEtcInfo(self,True))
+        widgets.Btn_Excel_dde.clicked.connect(self.onClick)
+
+        # LEFT MENUS
+        widgets.Btn_home.clicked.connect(self.onClick)
+        widgets.Btn_dde.clicked.connect(self.onClick)
+        widgets.Btn_trade_settings.clicked.connect(self.onClick)
+        widgets.Btn_widgets.clicked.connect(self.onClick)
+        widgets.Btn_Search.clicked.connect(lambda:UIFunctions.searchBtn(self))
+        widgets.Btn_ClearSearchLog.clicked.connect(self.onClick)
+        widgets.lineEdit.returnPressed.connect(lambda:UIFunctions.searchBtn(self))
+
+        # EXTRA LEFT BOX
+        def openCloseLeftBox():
+            UIFunctions.toggleLeftBox(self, True)
+        widgets.Btn_Settings.clicked.connect(openCloseLeftBox)
+        widgets.extraCloseColumnBtn.clicked.connect(openCloseLeftBox)
+
+        # EXTRA RIGHT BOX
+        def openCloseRightBox():
+            UIFunctions.toggleRightBox(self, True)
+        widgets.Btn_extraRightBox.clicked.connect(openCloseRightBox)
+
+        # SHOW APP
+        # ///////////////////////////////////////////////////////////////
+        self.show()
+
+        AppFunctions.setThemeHack(self,'')
+
+        # SET HOME PAGE AND SELECT MENU
+        # ///////////////////////////////////////////////////////////////
+        widgets.stackedWidget.setCurrentWidget(widgets.page_home)
+
+        self.tr_event_loop = QEventLoop()
+
+    # BUTTONS CLICK
+    # Post here your functions for clicked buttons
+    # ///////////////////////////////////////////////////////////////
+    def onClick(self):
+        # GET BUTTON CLICKED
+        btn = self.sender()
+        btnName = btn.objectName()
+        
+        if btnName == "Btn_home":
+            widgets.stackedWidget.setCurrentWidget(widgets.page_home)
+
+        if btnName == "Btn_dde":
+            widgets.stackedWidget.setCurrentWidget(widgets.page_dde)
+            
+        if btnName == "Btn_trade_settings":
+            widgets.stackedWidget.setCurrentWidget(widgets.page_trading)  
+            
+        if btnName == "Btn_widgets":
+            widgets.stackedWidget.setCurrentWidget(widgets.page_widget) 
+            
+        if btnName == "Btn_ClearSearchLog":
+            widgets.lineEdit.setText('')
+
+        if btnName == "Btn_Excel_dde":
+            os.startfile('C:\\Users\\Corbe\\OneDrive\\바탕 화면\\DDE_23.xlsm')
+            
+    # RESIZE EVENTS
+    # ///////////////////////////////////////////////////////////////
+    def resizeEvent(self, event):
+        # Update Size Grips
+        UIFunctions.resize_grips(self)
+        
+    # MOUSE CLICK EVENTS
+    # ///////////////////////////////////////////////////////////////
+    def mousePressEvent(self, event):
+        # SET DRAG POS WINDOW
+        self.dragPos = event.globalPos()
+
+    # KIWOOM EVENTS
+    # ///////////////////////////////////////////////////////////////
+
+    # LOGIN EVENT
+    def login_slot(self, err_code):  # 로그인
+        if err_code == 0:
+            Kiwoom.login_event_loop.exit()
+            S.LOGIN_STATE = 1
+            widgets.stackedWidget.setCurrentWidget(widgets.page_dde)
+            AppFunctions.loginState(self,0)
+            Kiwoom.regist_Real_Code(self,'4000',"",'215',"1")
+            Kiwoom.request_login_info(self)
+            Kiwoom.request_balance(self)
+            Kiwoom.request_days_remaining(self)
+            Kiwoom.request_option_price(self)
+
+
+    # TR EVENTS
+    def trdata_slot(self, sScrNo, sRQName, sTrCode, sRecordName, sPrevNext):
+        if sRQName == "선옵잔고":
+            rows = self.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            if rows > 0:
+                for i in range(rows):
+                    Code = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"종목코드")
+                    Code = Code.strip()
+
+                    Gubun = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"매도매수구분")
+                    Gubun = Gubun.strip()
+                    if Gubun == "2":
+                        Gubun = "매수"
+                    else:
+                        Gubun = "매도"
+
+                    Quantity = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"수량")
+                    Quantity = int(Quantity.strip())
+
+                    Buy_Price = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"매입단가")
+                    Buy_Price = float(Buy_Price.strip()) * 0.001
+
+                    Price = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"현재가")
+                    Price = float(Price.strip()) * 0.001
+
+                    청산가능수량 = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"청산가능수량")
+                    청산가능수량 = int(청산가능수량.strip())
+
+                    약정금액 = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"약정금액")
+                    약정금액 = int(약정금액.strip())
+
+                    평가금액 = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"평가금액")
+                    평가금액 = int(평가금액.strip())
+
+                    수익률 = round(((평가금액 - 약정금액) / 약정금액 * 100), 2)
+
+                    S.balance_dict = {"종목코드": Code,"구분": Gubun,"수량": Quantity,"매입단가": Buy_Price,"현재가": Price,"청산가능수량": 청산가능수량,"약정금액": 약정금액,"평가금액": 평가금액,"수익률": 수익률}
+
+                    if (S.손절 >= 수익률) or (수익률 >= S.이익):
+                        Kiwoom.request_orderFO(self, "신규매도", Code, 청산가능수량, "0")
+            else:
+                print("비어있는 잔고\n")
+                S.balance_dict = {}
+            Kiwoom.Disconnect_All_Real(self)
+            self.tr_event_loop.exit()
+
+        if sRQName == "선옵잔존일조회":
+            잔존일수 = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,0,"잔존일수")
+            잔존일수 = 잔존일수.strip()
+            
+            영업일기준잔존일 = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,0,"영업일기준잔존일")
+            영업일기준잔존일 = 영업일기준잔존일.strip()
+
+            widgets.tableWidget.setItem(1, 3, QTableWidgetItem("%s일"%영업일기준잔존일))
+            self.tr_event_loop.exit()
+            
+        if sRQName == "옵션시세조회":
+            oAct = []
+            oCode = []
+            cStr = []
+            pStr = []   
+            rows = self.kiwoom.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            for i in range(rows):
+                cCode = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"종목코드")
+                cCode = cCode.strip()
+
+                cActPrice = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"행사가")
+                cActPrice = float(cActPrice.strip())
+                
+                cPrice = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"현재가")
+                cPrice = float(cPrice.strip().lstrip("+").lstrip("-"))
+
+                cOpen = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"시가")
+                cOpen = float(cOpen.strip().lstrip("+").lstrip("-"))
+
+                cHigh = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"고가")
+                cHigh = float(cHigh.strip().lstrip("+").lstrip("-"))
+
+                cLow = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"저가")
+                cLow = float(cLow.strip().lstrip("+").lstrip("-"))
+
+                cKijoonka = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"기준가")
+                cKijoonka = float(cKijoonka.strip().lstrip("+").lstrip("-"))
+
+                # PUT TR DATA
+                pCode = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_종목코드")
+                pCode = pCode.strip()
+
+                pActPrice = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_행사가")
+                pActPrice = float(pActPrice.strip())
+                
+                pPrice = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_현재가")
+                pPrice = float(pPrice.strip().lstrip("+").lstrip("-"))
+
+                pOpen = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_시가")
+                pOpen = float(pOpen.strip().lstrip("+").lstrip("-"))
+
+                pHigh = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_고가")
+                pHigh = float(pHigh.strip().lstrip("+").lstrip("-"))
+
+                pLow = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_저가")
+                pLow = float(pLow.strip().lstrip("+").lstrip("-"))
+
+                pKijoonka = self.kiwoom.dynamicCall("GetCommData(QString,QString,int,QString)",sTrCode,sRQName,i,"풋_기준가")
+                pKijoonka = float(pKijoonka.strip().lstrip("+").lstrip("-"))
+                
+                S.option_table_dict.update({cCode: {"행사가": cActPrice,"현재가": cPrice,"시가": cOpen,"고가": cHigh,"저가": cLow}})
+                S.option_table_dict.update({pCode:{"행사가": pActPrice,"현재가": pPrice,"시가": pOpen,"고가": pHigh,"저가": pLow}})
+
+                if ((S.sgMin <= cOpen <= S.sgMax) or (S.sgMin <= pOpen <= S.sgMax)):
+                    cStr.append(cCode)
+                    pStr.append(pCode)
+                    oCode.append(cCode)
+                    oCode.append(pCode)
+                    oAct.append(cActPrice)
+                    oAct.append(pActPrice)
+                    oAct = list(set(oAct))
+                    oAct.sort()
+
+                    i = len(oAct) + 2
+                    widgets.tableWidget.setItem(i, 1, QTableWidgetItem("%s"%cKijoonka))
+                    widgets.tableWidget.setItem(i, 2, QTableWidgetItem("%s"%cLow))
+                    widgets.tableWidget.setItem(i, 3, QTableWidgetItem("%s"%cHigh))
+                    widgets.tableWidget.setItem(i, 4, QTableWidgetItem("%s"%cOpen))
+                    widgets.tableWidget.setItem(i, 5, QTableWidgetItem("%s"%cPrice))
+                    widgets.tableWidget.setItem(i, 6, QTableWidgetItem("%s"%oAct[-i+2]))
+                    widgets.tableWidget.setItem(i, 7, QTableWidgetItem("%s"%pPrice))  
+                    widgets.tableWidget.setItem(i, 8, QTableWidgetItem("%s"%pOpen))
+                    widgets.tableWidget.setItem(i, 9, QTableWidgetItem("%s"%pHigh))
+                    widgets.tableWidget.setItem(i, 10, QTableWidgetItem("%s"%pLow))
+                    widgets.tableWidget.setItem(i, 11, QTableWidgetItem("%s"%pKijoonka))
+                        
+                Kiwoom.Disconnect_All_Real(self)
+            cStr.sort(reverse=True)
+            pStr.sort(reverse=True)
+            oCode.sort(reverse=True)
+            self.cStr = ";".join(cStr)
+            self.pStr = ";".join(pStr)
+            self.oCode = oCode
+            self.tr_event_loop.exit()
+
+
+    # REAL EVENTS
+    def chejan_slot(self, Gubun, nItemCnt, sFidList):
+        if int(Gubun) == 0:  # 접수와 체결
+            oCode = self.kiwoom.dynamicCall("GetChejanData(int)", 9001)  # 종목코드
+
+            medosu = self.kiwoom.dynamicCall("GetChejanData(int)", 905)  # 구분
+            medosu = medosu.strip().lstrip("+").lstrip("-")
+
+            order_number = self.kiwoom.dynamicCall("GetChejanData(int)", 9203)  # 주문번호
+            on = int(order_number)
+
+            order_q = self.kiwoom.dynamicCall("GetChejanData(int)", 900)  # 주문수량
+
+            un_quan = self.kiwoom.dynamicCall("GetChejanData(int)", 902)  # 미체결수량
+            un_quan = int(un_quan)
+
+            one_order_number = self.kiwoom.dynamicCall("GetChejanData(int)", 904)  # 원주문번호
+            oon = int(one_order_number)
+
+            order_price = self.kiwoom.dynamicCall("GetChejanData(int)", 901)  # 주문가격
+
+            price = self.kiwoom.dynamicCall("GetChejanData(int)", 10)  # Price
+
+            rPrice1 = self.kiwoom.dynamicCall("GetChejanData(int)", 28)  # 최우선 매수호가1
+
+            if un_quan == 0 and (("취소" not in medosu)):
+                print("\n%s 체결 | No.%s | %s | 주문가: %s | 주문수량: %s개 | 미체결량: %s개\n"% (medosu, on, oCode, order_price, order_q, un_quan))
+                if medosu == '매도':
+                    S.balance_dict = {}
+                if medosu == "매수":
+                    S.balance_dict.update({"종목코드": oCode,"구분": medosu,"수량": order_q,"매입단가": order_price,"Price": price,"청산가능수량": order_q})
+            else:
+                S.revise_order_dict = {"종목코드": oCode,"구분": medosu,"주문번호": on,"주문수량": order_q,"주문가격": order_price,"미체결수량": un_quan,"원주문번호": oon,"매수호가": rPrice1,"Price": price}
+                print("%s 접수 | No.%s | %s | 주문가: %s | 주문수량: %s개 | 미체결량: %s개 | Price: %s"% (medosu, on, oCode, order_price, order_q, un_quan, price))
+
+
+    # REALTYPE DATA EVENT
+    def realdata_slot(self, oCode, RealType):
+        if RealType == "선물시세":
+            a = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 10)  # Price
+            a = abs(float(a))
+            self.Future_Price = a
+
+            b = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 16)  # Open
+            b = abs(float(b))
+
+            c = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 17)  # High
+            c = abs(float(c))
+
+            d = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 18)  # Low
+            d = abs(float(d))
+
+            e = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 197)  # KOSPI200
+            e = abs(float(e))
+
+            widgets.tableWidget.setItem(1, 7, QTableWidgetItem("%s" % a))
+            widgets.tableWidget.setItem(1, 8, QTableWidgetItem("%s" % b))
+            widgets.tableWidget.setItem(1, 9, QTableWidgetItem("%s" % c))
+            widgets.tableWidget.setItem(1, 10, QTableWidgetItem("%s" % d))
+            widgets.tableWidget.setItem(1, 2, QTableWidgetItem("%s" % e))
+
+        elif RealType == "선물호가잔량":
+            a = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 128)  # 순매수잔량
+            a = int(a)
+            
+            b = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 137)  # 호가순잔량
+            b = int(b)
+            
+            widgets.tableWidget.setItem(1, 11, QTableWidgetItem("%s" % a))
+            widgets.tableWidget.setItem(1, 12, QTableWidgetItem("%s" % b))
+            cLen = len(S.cSg_List)
+            pLen = len(S.pSg_List)
+            
+            if 0 < a < S.cHoka:
+                S.추세 = 'CALL대기'
+
+            if 0 > a > S.pHoka:
+                S.추세 = 'PUT대기'
+
+            # CALL SG
+            if cLen == 0 and pLen > 0:
+                if S.cHoka <= a:
+                    S.추세 = 'CALL'
+
+            # PUT SG
+            if pLen == 0 and cLen > 0:
+                if S.pHoka >= a:
+                    S.추세 = 'PUT'
+
+            # NOT BOTH
+            if cLen == 0 and pLen == 0:
+                if (S.cHoka <= a < S.cHoka2):
+                    S.추세 = 'CALL대기'
+                    
+                if (S.pHoka <= a < S.pHoka2):
+                    S.추세 = 'PUT대기'
+                
+                if (S.cHoka2 <= a):
+                    S.추세 = 'CALL'
+                    
+                if (S.pHoka2 >= a):
+                    S.추세 = 'PUT'
+                    
+                if S.pHoka < a < S.cHoka:
+                    S.추세 = '중립'
+
+            widgets.tableWidget.setItem(1, 6, QTableWidgetItem(S.추세))
+
+        elif RealType == "옵션시세":
+            a = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 10)  # 현재가
+            a = abs(float(a))
+
+            b = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 16)  # 시가
+            b = abs(float(b))
+
+            c = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 17)  # 고가
+            c = abs(float(c))
+
+            d = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 18)  # 저가
+            d = abs(float(d))
+
+            e = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 28)  # (최우선)매수호가
+            e = abs(float(e))
+
+            f = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 137)  # 호가순잔량
+            f = abs(float(f))
+
+            g = self.kiwoom.dynamicCall("GetCommRealData(QString,int)", oCode, 189)  # 내재변동성 (I.V.)
+            g = abs(float(g))
+
+            if oCode[0:1] == "2":  # UPDATE CALL PRICE
+                if (S.매수 == False) and (S.balance_dict == {}):
+                    if (S.bas_min <= e <= S.bas_max) and (a >= b + S.miss_range):
+                        if S.추세 == "CALL":
+                            S.매수 = True
+                            Kiwoom.request_orderFO(self, "신규매수", oCode, S.수량, e)
+
+                        elif S.반대매수 == 2:
+                            S.매수 = True
+                            S.반대매수 = 0
+                            Kiwoom.request_orderFO(self, "신규매수", oCode, S.수량, e)
+
+
+                i = int(self.oCode.index(oCode)-len(self.oCode)/2) + 3
+                widgets.tableWidget.setItem(i, 0, QTableWidgetItem("%s" % g))
+                widgets.tableWidget.setItem(i, 2, QTableWidgetItem("%s" % d))
+                widgets.tableWidget.setItem(i, 3, QTableWidgetItem("%s" % c))
+                widgets.tableWidget.setItem(i, 4, QTableWidgetItem("%s" % b))
+                widgets.tableWidget.setItem(i, 5, QTableWidgetItem("%s" % a))
+                
+                # 교차 가격 뒤집기
+                crscLow = widgets.tableWidget.item(i,2).text()
+                crscHigh = float(widgets.tableWidget.item(i,3).text())
+                crscOpen = widgets.tableWidget.item(i,4).text()
+                crscPrice = widgets.tableWidget.item(i,5).text()
+                crspPrice = widgets.tableWidget.item(i,7).text()
+                crspOpen = widgets.tableWidget.item(i,8).text()
+                crspHigh = float(widgets.tableWidget.item(i,9).text())
+                crspLow = widgets.tableWidget.item(i,10).text()
+
+                if crscPrice == crspPrice:
+                    cross_dict.update({oCode:crscPrice})
+                    widgets.tableWidget.setItem(i, 13, QTableWidgetItem("%s" % crscPrice))   
+
+                    if (crscHigh > crspHigh) and (crscLow > crspLow) and (crscPrice > crspOpen):
+                        widgets.tableWidget.item(i, 13).setForeground(QBrush(QColor(255, 0, 0)))
+
+                    if (crspHigh > crscHigh) and (crscLow < crspLow) and (crspPrice > crscOpen):
+                        widgets.tableWidget.item(i, 13).setForeground(QBrush(QColor(144, 238, 144)))
+
+                # 콜 High == 풋 High
+                if crscHigh == crspHigh:
+                    widgets.tableWidget.item(i, 4).setBackground(QBrush(QColor(255, 85, 85)))
+                    widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 85, 85)))
+
+                # 콜 Low == 풋 Low
+                if crscLow == crspLow:
+                    widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(139, 233, 253)))
+                    widgets.tableWidget.item(i, 10).setBackground(QBrush(QColor(139, 233, 253)))         
+                                    
+                # Low High
+                if crscLow == crspHigh:
+                    widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(255, 184, 108)))
+                    widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 184, 108)))
+
+                if crscHigh == crspLow:
+                    widgets.tableWidget.item(i, 4).setBackground(QBrush(QColor(255, 184, 108)))
+                    widgets.tableWidget.item(i, 10).setBackground(QBrush(QColor(255, 184, 108)))
+                
+                for abc in 주요가List:
+                    if (crscHigh - S.miss_range) <= abc <= (crscHigh + S.miss_range):
+                        widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(255, 184, 108)))
+
+                    if (crspHigh - S.miss_range) <= abc <= (crspHigh + S.miss_range):
+                        widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 184, 108)))         
+
+
+                if oCode not in S.cHigh_dict:
+                    S.cHigh_dict.update({oCode:c})
+
+                if oCode not in S.cLow_dict:
+                    S.cLow_dict.update({oCode:d})
+
+                else:
+                    S.cHigh_dict[oCode] = c
+                    S.cLow_dict[oCode] = d
+
+                if S.sgMin <= b <= S.sgMax:
+                    if (b == c) or (round(abs(b-c),2) <= S.miss_range):
+                        widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(214, 230, 245)))
+                        widgets.tableWidget.item(i, 3).setForeground(QBrush(QColor(0, 0, 0)))
+                        widgets.tableWidget.item(i, 4).setBackground(QBrush(QColor(214, 230, 245)))
+                        widgets.tableWidget.item(i, 4).setForeground(QBrush(QColor(0, 0, 0)))
+                        if oCode not in S.cSg_List:
+                            S.cSg_List.append(oCode)
+
+            if oCode[0:1] == "3":  # UPDATE PUT PRICE
+
+                if oCode in self.oCode:
+                    i = self.oCode.index(oCode) + 3
+                    
+                    widgets.tableWidget.setItem(i, 7, QTableWidgetItem("%s" % a))
+                    widgets.tableWidget.setItem(i, 8, QTableWidgetItem("%s" % b))
+                    widgets.tableWidget.setItem(i, 9, QTableWidgetItem("%s" % c))
+                    widgets.tableWidget.setItem(i, 10, QTableWidgetItem("%s" % d))
+                    widgets.tableWidget.setItem(i, 12, QTableWidgetItem("%s" % g))
+                
+                    # 교차 가격 뒤집기
+                    crscLow = widgets.tableWidget.item(i,2).text()
+                    crscHigh = float(widgets.tableWidget.item(i,3).text())
+                    crscOpen = widgets.tableWidget.item(i,4).text()
+                    crscPrice = widgets.tableWidget.item(i,5).text()
+                    crspPrice = widgets.tableWidget.item(i,7).text()
+                    crspOpen = widgets.tableWidget.item(i,8).text()
+                    crspHigh = float(widgets.tableWidget.item(i,9).text())
+                    crspLow = widgets.tableWidget.item(i,10).text()
+
+                    if crscPrice == crspPrice:
+                        cross_dict.update({oCode:crscPrice})
+                        widgets.tableWidget.setItem(i, 13, QTableWidgetItem("%s" % crspPrice))
+                        if (crscHigh > crspHigh) and (crscLow > crspLow) and (crscPrice > crspOpen):
+                            widgets.tableWidget.item(i, 13).setForeground(QBrush(QColor(255, 0, 0)))
+
+                        if (crspHigh > crscHigh) and (crscLow < crspLow) and (crspPrice > crscOpen):
+                            widgets.tableWidget.item(i, 13).setForeground(QBrush(QColor(144, 238, 144)))
+                    # 콜 High == 풋 High
+                    if crscHigh == crspHigh:
+                        widgets.tableWidget.item(i, 4).setBackground(QBrush(QColor(255, 85, 85)))
+                        widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 85, 85)))        
+                                            
+                    # 콜 Low == 풋 Low
+                    if crscLow == crspLow:
+                        widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(139, 233, 253)))
+                        widgets.tableWidget.item(i, 10).setBackground(QBrush(QColor(139, 233, 253)))      
+                                
+                    # Low == High
+                    if crscLow == crspHigh:
+                        widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(255, 184, 108)))
+                        widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 184, 108)))
+
+                    if crscHigh == crspLow:
+                        widgets.tableWidget.item(i, 4).setBackground(QBrush(QColor(255, 184, 108)))
+                        widgets.tableWidget.item(i, 10).setBackground(QBrush(QColor(255, 184, 108)))
+                        
+                    for abc in 주요가List:
+                        if (crscHigh - S.miss_range) <= abc <= (crscHigh + S.miss_range):
+                            widgets.tableWidget.item(i, 3).setBackground(QBrush(QColor(255, 184, 108)))
+
+                        if (crspHigh - S.miss_range) <= abc <= (crspHigh + S.miss_range):
+                            widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(255, 184, 108)))          
+
+                    if oCode not in S.pHigh_dict:
+                        S.pHigh_dict.update({oCode:c})
+
+                    if oCode not in S.pLow_dict:
+                        S.pLow_dict.update({oCode:d})
+
+                    else:
+                        S.pHigh_dict[oCode] = c
+                        S.pLow_dict[oCode] = d
+
+                    if S.sgMin <= b <= S.sgMax:
+                        if (b == c) or (round(abs(b-c),2) <= S.miss_range):
+                            widgets.tableWidget.item(i, 8).setBackground(QBrush(QColor(214, 230, 245)))
+                            widgets.tableWidget.item(i, 8).setForeground(QBrush(QColor(0, 0, 0)))
+                            widgets.tableWidget.item(i, 9).setBackground(QBrush(QColor(214, 230, 245)))
+                            widgets.tableWidget.item(i, 9).setForeground(QBrush(QColor(0, 0, 0)))
+                            if oCode not in S.pSg_List:
+                                S.pSg_List.append(oCode)
+
+                    if (S.추세 == "PUT") and (S.balance_dict == {}):
+                        if (S.bas_min <= e <= S.bas_max) and (a >= b + S.miss_range):
+                            if S.매수 == False:
+                                S.매수 = True
+                                Kiwoom.request_orderFO(self, "신규매수", oCode, S.수량, e)
+
+                            elif S.반대매수 == 3:
+                                S.매수 = True
+                                S.반대매수 = 0
+                                Kiwoom.request_orderFO(self, "신규매수", oCode, S.수량, e)
+
+                if d in (S.콜고가풋저가 or S.콜저가풋고가):
+                    if S.REAL_STATE == 0:
+                        S.REAL_STATE = 1
+                        Kiwoom.Disconnect_All_Real(self)
+                    else:
+                        S.REAL_STATE = 0
+                        Kiwoom.Disconnect_All_Real(self)
+
+            # SELL ORDER TERRITORY
+            # ///////////////////////////////////////////////////////////////
+
+            if S.balance_dict != {}:
+                if oCode == S.balance_dict["종목코드"]:
+                    buy_price = float(S.balance_dict["매입단가"])
+                    주문가능수량 = int(S.balance_dict["청산가능수량"])
+
+                    # GET BRO CODE AND PRICE
+                    if S.형님행사가 == '':
+                        S.형님Cnt = 1
+                        S.형님행사가 = Kiwoom.get_bro_code(self, oCode)
+
+                    if (a > S.형님저가 > 0.01) and (S.형님행사가 != ''):
+                        S.형님Cnt = 2
+                        S.형님행사가2 = Kiwoom.get_bro_code(self, S.형님행사가)
+
+                    if S.매수 == True:
+                        수익률 = (a - buy_price) / buy_price * 100
+
+                        # 수익률 조건 매도
+                        if (S.손절 >= 수익률) or (수익률 >= S.이익):
+                            print("매도 수익률: %s"%수익률)
+                            Kiwoom.request_orderFO(self, "신규매도", oCode, 주문가능수량, "0")
+
+                        # 추세 변동 매도 및 매수
+                        if oCode[0:1] == '3' and len(S.cSg_List) > 0 and len(S.pSg_List) == 0:
+                            S.CB_terms = 1
+
+                        if S.CB_terms == 1 and len(S.cSg_List) == 0:
+                            print("매도 4")
+                            Kiwoom.request_orderFO(self, "신규매도", oCode, 주문가능수량, "0")
+                            S.반대매수 = 3
+
+                        # ////////////////////////////////////////////////////////////////////
+                        if oCode[0:1] == '2' and len(S.pSg_List) > 0 and len(S.cSg_List) == 0:
+                            S.PB_terms = 1
+
+                        if S.PB_terms == 1 and len(S.pSg_List) == 0:
+                            print("매도 3")
+                            Kiwoom.request_orderFO(self, "신규매도", oCode, 주문가능수량, "0")
+                            S.반대매수 = 2
+
+                        # 보유 종목의 형님저가 도달시 매도
+                        if (a == (S.형님저가 or S.형님저가2)) and (S.형님저가 > 0):
+                            print("매도 1")
+                            Kiwoom.request_orderFO(self, "신규매도", oCode, 주문가능수량, "0")
+
+                    elif (S.매수 == False) and (주문가능수량 > 0):
+                        S.매수 = True
+                    if buy_price == 0:
+                        S.balance_dict = {}
+
+                if oCode == S.형님행사가:
+                    S.형님저가 = d
+
+                if oCode == S.형님행사가2:
+                    S.형님저가2 = d
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("icon.ico"))
+    s = Security()
+    sys.exit(app.exec_())
