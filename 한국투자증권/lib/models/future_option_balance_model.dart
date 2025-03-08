@@ -1,0 +1,36 @@
+class FoBalanceModel {
+  final String cano,
+      acnt_prdt_cd,
+      pdno,
+      prdt_type_cd,
+      shtn_pdno,
+      prdt_name,
+      sll_buy_dvsn_name,
+      cblc_qty,
+      excc_unpr,
+      ccld_avg_unpr1,
+      idx_clpr,
+      pchs_amt,
+      evlu_amt,
+      evlu_pfls_amt,
+      trad_pfls_amt,
+      lqd_psbl_qty;
+
+  FoBalanceModel.fromjson(Map<String, dynamic> json)
+      : cano = json['cano'],
+        acnt_prdt_cd = json['acnt_prdt_cd'],
+        pdno = json['pdno'],
+        prdt_type_cd = json['prdt_type_cd'],
+        shtn_pdno = json['shtn_pdno'],
+        prdt_name = json['prdt_name'],
+        sll_buy_dvsn_name = json['sll_buy_dvsn_name'],
+        cblc_qty = json['cblc_qty'],
+        excc_unpr = json['excc_unpr'],
+        ccld_avg_unpr1 = json['ccld_avg_unpr1'],
+        idx_clpr = json['idx_clpr'],
+        pchs_amt = json['pchs_amt'],
+        evlu_amt = json['evlu_amt'],
+        evlu_pfls_amt = json['evlu_pfls_amt'],
+        trad_pfls_amt = json['trad_pfls_amt'],
+        lqd_psbl_qty = json['lqd_psbl_qty'];
+}
